@@ -1,10 +1,19 @@
-import { useEffect, useRef } from 'react';
-import { useRouter } from 'expo-router';
-import { View, Text, StyleSheet, Animated, ImageBackground, Image } from "react-native";
-import { initDB } from '../db/database';
-import { syncOfflineUsers } from '../sync/syncUsers';
-import { startAutoSync } from '../sync/useAutoSync';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useRouter } from "expo-router";
+import { useEffect, useRef } from "react";
+import {
+  Animated,
+  Image,
+  ImageBackground,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+
+import { initDB } from "../db/database";
+import { syncMasterData } from "../sync/syncMasterData";
+import { syncOfflineUsers } from "../sync/syncUsers";
+import { startAutoSync } from "../sync/useAutoSync";
 
 export default function Index() {
   const router = useRouter();
@@ -13,50 +22,50 @@ export default function Index() {
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
 
   useEffect(() => {
+    // ✅ FIX TYPE HERE
+    let stopAutoSync: (() => void) | undefined;
 
-    // 🔥 Splash animation
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
-        duration: 1500,
+        duration: 1200,
         useNativeDriver: true,
       }),
       Animated.spring(scaleAnim, {
         toValue: 1,
-        friction: 4,
+        friction: 5,
         useNativeDriver: true,
       }),
     ]).start();
 
     const initApp = async () => {
       try {
-        // 🔵 DB INIT
-        initDB();
+        console.log("🚀 INIT START");
 
-        // 🔵 SYNC
+        await initDB();
+        await syncMasterData();
         await syncOfflineUsers();
-        startAutoSync();
 
-        // 🔵 SESSION CHECK
-        const userData = await AsyncStorage.getItem('user');
+        // ✅ now properly typed
+        stopAutoSync = startAutoSync();
+
+        const userData = await AsyncStorage.getItem("user");
 
         setTimeout(() => {
-          if (userData) {
-            console.log('AUTO LOGIN');
-            router.replace('/home');
-          } else {
-            router.replace('/login');
-          }
-        }, 2000);
+          router.replace(userData ? "/(tabs)/home" : "/login");
+        }, 800);
 
       } catch (error) {
-        console.log('INIT ERROR:', error);
-        router.replace('/login');
+        console.log("❌ INIT ERROR:", error);
+        router.replace("/login");
       }
     };
 
     initApp();
 
+    return () => {
+      stopAutoSync?.();
+    };
   }, []);
 
   return (
@@ -70,7 +79,10 @@ export default function Index() {
       <Animated.View
         style={[
           styles.logoContainer,
-          { opacity: fadeAnim, transform: [{ scale: scaleAnim }] },
+          {
+            opacity: fadeAnim,
+            transform: [{ scale: scaleAnim }],
+          },
         ]}
       >
         <Image
@@ -88,11 +100,16 @@ export default function Index() {
   );
 }
 
+/* 🎨 STYLES */
 const styles = StyleSheet.create({
   background: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(11, 61, 46, 0.6)",
   },
   logoContainer: {
     alignItems: "center",
@@ -114,9 +131,5 @@ const styles = StyleSheet.create({
     fontSize: 13,
     textAlign: "center",
     paddingHorizontal: 20,
-  },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(11, 61, 46, 0.6)",
   },
 });

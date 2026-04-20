@@ -1,15 +1,27 @@
-import NetInfo from '@react-native-community/netinfo';
-import { syncOfflineUsers } from './syncUsers';
+import NetInfo from "@react-native-community/netinfo";
+import { syncForms } from "./syncForms";
+
+let interval;
 
 export const startAutoSync = () => {
-  NetInfo.addEventListener(state => {
-    const isOnline = state.isConnected && state.isInternetReachable;
+  console.log("🔄 AUTO SYNC STARTED");
 
-    console.log('Network status:', isOnline);
+  const run = async () => {
+    const state = await NetInfo.fetch();
 
-    if (isOnline) {
-      console.log('Internet is back → syncing...');
-      syncOfflineUsers();
+    if (state.isConnected) {
+      console.log("🌐 SYNC TRIGGERED");
+      await syncForms();
+    } else {
+      console.log("📴 OFFLINE");
     }
-  });
+  };
+
+  run();
+
+  interval = setInterval(run, 10000);
+
+  return () => {
+    if (interval) clearInterval(interval);
+  };
 };

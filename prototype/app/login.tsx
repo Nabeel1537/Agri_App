@@ -1,15 +1,15 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useRouter } from "expo-router";
+import { useState } from "react";
 import {
-  View,
+  Alert,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
-  Alert,
+  View,
 } from "react-native";
-import { useState } from "react";
-import { useRouter } from "expo-router";
-import { db } from "../db/database";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { db, escapeSql } from "../db/database";
 
 type User = {
   id: number;
@@ -69,7 +69,7 @@ export default function Login() {
       // 🌐 ONLINE LOGIN
       // =========================
       const res = await fetch(
-        "http://172.16.17.130/backend/api/login.php",
+        "http://172.16.13.232/backend/api/login.php",
         {
           method: "POST",
           headers: {
@@ -85,16 +85,20 @@ export default function Login() {
 
       if (data?.status === "success" && data?.user) {
         const user: User = data.user;
+        const escapedName = escapeSql(user.name);
+        const escapedEmail = escapeSql(user.email);
+        const escapedPassword = escapeSql(password);
+        const escapedPhone = escapeSql(user.phone || "");
 
         // Save to SQLite
         db.execSync(`
           INSERT OR IGNORE INTO users 
           (name, email, password, phone, synced, created_at)
           VALUES (
-            '${user.name}',
-            '${user.email}',
-            '${password}',
-            '${user.phone || ""}',
+            '${escapedName}',
+            '${escapedEmail}',
+            '${escapedPassword}',
+            '${escapedPhone}',
             1,
             datetime('now')
           );

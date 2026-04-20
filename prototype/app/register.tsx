@@ -1,7 +1,7 @@
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
-import { useState } from 'react';
 import { useRouter } from 'expo-router';
-import { db } from '../db/database';
+import { useState } from 'react';
+import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { db, escapeSql } from '../db/database';
 
 export default function Signup() {
   const router = useRouter();
@@ -18,13 +18,18 @@ export default function Signup() {
         return;
       }
 
+      const escapedName = escapeSql(name);
+      const escapedEmail = escapeSql(email);
+      const escapedPassword = escapeSql(password);
+      const escapedPhone = escapeSql(phone);
+
       db.execSync(`
         INSERT INTO users (name, email, password, phone, synced, created_at)
         VALUES (
-          '${name}',
-          '${email}',
-          '${password}',
-          '${phone}',
+          '${escapedName}',
+          '${escapedEmail}',
+          '${escapedPassword}',
+          '${escapedPhone}',
           0,
           datetime('now')
         );
